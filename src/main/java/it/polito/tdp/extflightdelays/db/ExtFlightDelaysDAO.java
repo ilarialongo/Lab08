@@ -7,9 +7,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import it.polito.tdp.extflightdelays.model.Airline;
 import it.polito.tdp.extflightdelays.model.Airport;
+import it.polito.tdp.extflightdelays.model.Connessione;
 import it.polito.tdp.extflightdelays.model.Flight;
 
 public class ExtFlightDelaysDAO {
@@ -37,24 +39,23 @@ public class ExtFlightDelaysDAO {
 		}
 	}
 
-	public List<Airport> loadAllAirports() {
+	public void loadAllAirports(Map <Integer, Airport> idMap) {
 		String sql = "SELECT * FROM airports";
-		List<Airport> result = new ArrayList<Airport>();
-
+		
 		try {
 			Connection conn = ConnectDB.getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
+				if (!idMap.containsKey(rs.getInt("ID"))) {
 				Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
 						rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
 						rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
-				result.add(airport);
+				idMap.put(airport.getId(), airport);
+				}
 			}
-
 			conn.close();
-			return result;
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -91,4 +92,66 @@ public class ExtFlightDelaysDAO {
 			throw new RuntimeException("Error Connection Database");
 		}
 	}
+	
+	public double calcolaDistanzaMedia (int aPartenza, int aDestinazione) {
+		String sql= "SELECT AVG (DISTANCE) AS media FROM flights AS F WHERE (f.ORIGIN_AIRPORT_ID=? AND f.DESTINATION_AIRPORT_ID=?) OR (f.ORIGIN_AIRPORT_ID=? AND f.DESTINATION_AIRPORT_ID=?)";
+		double media=0.0;
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, aPartenza);
+			st.setInt(2, aDestinazione);
+			st.setInt(3, aDestinazione);
+			st.setInt(4, aPartenza);
+			ResultSet rs = st.executeQuery();
+			if(rs.next()) {
+				media= rs.getDouble("media");
+			}
+			conn.close();
+			return media;
+			
+		}
+			catch (SQLException e) {
+				e.printStackTrace();
+				System.out.println("Errore connessione al database");
+				throw new RuntimeException("Error Connection Database");
+			}
+	}
+	
+public List<Connessione> getConnessione(Map <Integer, Airport> idMap) {
+	String sql= "SELECT DISTINCT ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID FROM flights";
+	List <Connessione> connessioni= new ArrayList<>();
+	boolean flag=true;
+	try {
+		Connection conn = ConnectDB.getConnection();
+		PreparedStatement st = conn.prepareStatement(sql);
+		ResultSet rs = st.executeQuery();
+		while (rs.next()) {
+			Connessione c= new Connessione(idMap.get(rs.getInt("ORIGIN_AIRPORT_ID")), idMap.get(rs.getInt("DESTINATION_AIRPORT_ID")), this.calcolaDistanzaMedia(rs.getInt("ORIGIN_AIRPORT_ID"), rs.getInt("DESTINATION_AIRPORT_ID")));
+			if (connessioni.isEmpty()) {
+				connessioni.add(c);
+			}
+			else {
+				for (Connessione cTemp: connessioni) {
+					if ((cTemp.getPartenza().getId()!=c.getArrivo().getId()) && (cTemp.getArrivo().getId()!=c.getPartenza().getId())) {
+						flag=false;
+					}
+				}
+				
+				if (flag==false) {
+					connessioni.add(c);
+				}
+			}
+		}
+		conn.close();
+		return connessioni;	
+	}
+	catch (SQLException e) {
+		e.printStackTrace();
+		System.out.println("Errore connessione al database");
+		throw new RuntimeException("Error Connection Database");
+	}
+	
+}
+	
 }

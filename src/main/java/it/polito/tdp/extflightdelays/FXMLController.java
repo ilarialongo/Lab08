@@ -35,7 +35,9 @@ public class FXMLController {
 
     @FXML
     void doAnalizzaAeroporti(ActionEvent event) {
-    	//TODO
+    	double distanzaMinima= Double.parseDouble(this.distanzaMinima.getText());
+    	model.creaGrafo(distanzaMinima);
+    	txtResult.setText(model.nVertici()+" "+model.nArchi());
     }
 
     @FXML // This method is called by the FXMLLoader when initialization is complete
