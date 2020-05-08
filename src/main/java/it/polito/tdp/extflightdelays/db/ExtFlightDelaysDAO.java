@@ -93,7 +93,7 @@ public class ExtFlightDelaysDAO {
 		}
 	}
 	
-	public double calcolaDistanzaMedia (int aPartenza, int aDestinazione) {
+	/* public double calcolaDistanzaMedia (int aPartenza, int aDestinazione) {
 		String sql= "SELECT AVG (DISTANCE) AS media FROM flights AS F WHERE (f.ORIGIN_AIRPORT_ID=? AND f.DESTINATION_AIRPORT_ID=?) OR (f.ORIGIN_AIRPORT_ID=? AND f.DESTINATION_AIRPORT_ID=?)";
 		double media=0.0;
 		try {
@@ -118,28 +118,30 @@ public class ExtFlightDelaysDAO {
 			}
 	}
 	
-public List<Connessione> getConnessione(Map <Integer, Airport> idMap) {
+public List<Connessione> getConnessione(Map <Integer, Airport> idMap, double x) {
 	String sql= "SELECT DISTINCT ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID FROM flights";
 	List <Connessione> connessioni= new ArrayList<>();
-	boolean flag=true;
 	try {
 		Connection conn = ConnectDB.getConnection();
 		PreparedStatement st = conn.prepareStatement(sql);
 		ResultSet rs = st.executeQuery();
 		while (rs.next()) {
+			boolean flag=true;
 			Connessione c= new Connessione(idMap.get(rs.getInt("ORIGIN_AIRPORT_ID")), idMap.get(rs.getInt("DESTINATION_AIRPORT_ID")), this.calcolaDistanzaMedia(rs.getInt("ORIGIN_AIRPORT_ID"), rs.getInt("DESTINATION_AIRPORT_ID")));
 			if (connessioni.isEmpty()) {
 				connessioni.add(c);
 			}
 			else {
 				for (Connessione cTemp: connessioni) {
-					if ((cTemp.getPartenza().getId()!=c.getArrivo().getId()) && (cTemp.getArrivo().getId()!=c.getPartenza().getId())) {
+					if ((cTemp.getPartenza().getId()==c.getArrivo().getId()) && (cTemp.getArrivo().getId()==c.getPartenza().getId())) {
 						flag=false;
 					}
 				}
 				
-				if (flag==false) {
+				if (flag==true) {
+					if (c.getPeso()>=x) {
 					connessioni.add(c);
+					}
 				}
 			}
 		}
@@ -152,6 +154,49 @@ public List<Connessione> getConnessione(Map <Integer, Airport> idMap) {
 		throw new RuntimeException("Error Connection Database");
 	}
 	
+}*/
+
+public List<Connessione> getConnessione(Map <Integer, Airport> idMap, double x) {
+	String sql= "SELECT DISTINCT ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID, AVG(DISTANCE) AS media FROM flights AS f GROUP BY ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID";
+	List <Connessione> connessioni= new ArrayList<>();
+	try {
+		Connection conn = ConnectDB.getConnection();
+		PreparedStatement st = conn.prepareStatement(sql);
+		ResultSet rs = st.executeQuery();
+		while (rs.next()) {
+			boolean flag=true;
+			Connessione c= new Connessione(idMap.get(rs.getInt("ORIGIN_AIRPORT_ID")), idMap.get(rs.getInt("DESTINATION_AIRPORT_ID")), rs.getDouble("media"));
+			if (connessioni.isEmpty()) {
+				connessioni.add(c);
+			}
+			else {
+				for (Connessione cTemp: connessioni) {
+					if ((cTemp.getPartenza().getId()==c.getArrivo().getId()) && (cTemp.getArrivo().getId()==c.getPartenza().getId())) {
+						flag=false;
+						int i= connessioni.indexOf(cTemp);
+						connessioni.get(i).setPeso((c.getPeso()+cTemp.getPeso())/2);
+						
+					}
+				}
+				
+				if (flag==true) {
+					if (c.getPeso()>=x) {
+					connessioni.add(c);
+					}
+				}
+			}
+		}
+		conn.close();
+		return connessioni;	
+	}
+	catch (SQLException e) {
+		e.printStackTrace();
+		System.out.println("Errore connessione al database");
+		throw new RuntimeException("Error Connection Database");
+	}
+	
+	
 }
+
 	
 }

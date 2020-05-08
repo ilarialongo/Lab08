@@ -22,10 +22,9 @@ public class Model {
 		ExtFlightDelaysDAO dao= new ExtFlightDelaysDAO();
 		dao.loadAllAirports(idMap);
 		Graphs.addAllVertices(this.grafo, idMap.values());
-		for (Connessione c: dao.getConnessione(idMap)) {
-			if (c.getPeso()>=x) {
+		for (Connessione c: dao.getConnessione(idMap,x)) {
 				Graphs.addEdge(this.grafo, c.getPartenza(), c.getArrivo(), c.getPeso());
-		}
+		
 	}
 }
 	public int nVertici() {
@@ -33,6 +32,14 @@ public class Model {
 	}
 	public int nArchi() {
 		return this.grafo.edgeSet().size();
+	}
+	public String archi() {
+		String result="";
+		for(DefaultWeightedEdge e: grafo.edgeSet()) {
+			result+="("+grafo.getEdgeSource(e).getAirportName()+ ", "+ grafo.getEdgeTarget(e).getAirportName()+", "+ grafo.getEdgeWeight(e)+")\n";
+		}
+	return result.substring(0, result.length()-1);
+		
 	}
 	
 }

@@ -16,7 +16,8 @@ public class TestDAO {
 		System.out.println(dao.loadAllFlights().size());
 		Map <Integer, Airport> idMap= new HashMap<>();
 		dao.loadAllAirports(idMap);
-		System.out.println(dao.getConnessione(idMap));
+		System.out.println(dao.getConnessione(idMap,679));
+		
 		
 	}
 
